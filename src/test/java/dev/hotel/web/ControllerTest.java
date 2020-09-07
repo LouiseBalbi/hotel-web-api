@@ -1,8 +1,11 @@
 package dev.hotel.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -47,6 +50,20 @@ public class ControllerTest {
 				.andExpect(MockMvcResultMatchers.jsonPath("[0].nom").value("Nom 1"))
 				.andExpect(MockMvcResultMatchers.jsonPath("[0].prenoms").value("Prenoms 1"))
 				.andExpect(MockMvcResultMatchers.jsonPath("[1].nom").value("Nom 2"));
+	}
+	
+	
+	// Tests Get/clients/uuid
+	
+	@Test
+	public void findByUuidTest() throws Exception {
+		Client c1 = new Client("Dupont", "Jean");
+		
+		when(clientRepository.findById(UUID.fromString("dcf129f1-a2f9-47dc-8265-1d844244b192"))).thenReturn(Optional.of(c1));
+		
+		mockMvc.perform(MockMvcRequestBuilders.get("/clients/dcf129f1-a2f9-47dc-8265-1d844244b192"))
+		.andExpect(MockMvcResultMatchers.jsonPath("$.nom").value("Dupont"))
+		.andExpect(MockMvcResultMatchers.jsonPath("$.prenoms").value("Jean"));
 	}
 
 }
