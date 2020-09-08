@@ -2,6 +2,9 @@ package dev.hotel.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -14,24 +17,25 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import dev.hotel.entite.Client;
 import dev.hotel.repository.ClientRepository;
+import dev.hotel.service.ClientService;
+import dev.hotel.web.client.ClientController;
 
-@WebMvcTest(Controller.class)
-public class ControllerTest {
-
-//	@Autowired
-//	private Controller controller;
+@WebMvcTest(ClientController.class)
+public class ClientControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockBean
-	ClientRepository clientRepository;
+	ClientService clientService;
 
 
 	@Test
@@ -44,9 +48,11 @@ public class ControllerTest {
 		c2.setNom("Nom 2");
 		c2.setPrenoms("Prenoms 2");
 		
-		Mockito.when(clientRepository.findAll(PageRequest.of(10, 20))).thenReturn(new PageImpl(Arrays.asList(c1, c2)));
+		Mockito.when(clientService.listerClients(0, 2))
+		.thenReturn(Arrays.asList(c1, c2));
+		
 
-		mockMvc.perform(MockMvcRequestBuilders.get("/clients?start=10&size=20"))
+		mockMvc.perform(MockMvcRequestBuilders.get("/clients?start=0&size=2"))
 				.andExpect(MockMvcResultMatchers.jsonPath("[0].nom").value("Nom 1"))
 				.andExpect(MockMvcResultMatchers.jsonPath("[0].prenoms").value("Prenoms 1"))
 				.andExpect(MockMvcResultMatchers.jsonPath("[1].nom").value("Nom 2"));
@@ -58,12 +64,33 @@ public class ControllerTest {
 	@Test
 	public void findByUuidTest() throws Exception {
 		Client c1 = new Client("Dupont", "Jean");
+		UUID id = UUID.randomUUID();
+		c1.setUuid(id);
 		
-		when(clientRepository.findById(UUID.fromString("dcf129f1-a2f9-47dc-8265-1d844244b192"))).thenReturn(Optional.of(c1));
-		
-		mockMvc.perform(MockMvcRequestBuilders.get("/clients/dcf129f1-a2f9-47dc-8265-1d844244b192"))
+		Mockito.when(clientService.recupererClient(id)).thenReturn(Optional.of(c1));
+
+	
+		mockMvc.perform(MockMvcRequestBuilders.get("/clients/{uuid}", id))
 		.andExpect(MockMvcResultMatchers.jsonPath("$.nom").value("Dupont"))
 		.andExpect(MockMvcResultMatchers.jsonPath("$.prenoms").value("Jean"));
 	}
+	
+	
+	//Test Post/Clients
+	
+	@Test
+	public void creerClientTest() throws Exception {
+		Client c1 = new Client("Dupont", "Jean");
+		
+		Mockito.when(clientService.creerNouveauClient("Dupont", "Jean")).thenReturn(c1);
+		
+		mockMvc.perform(MockMvcRequestBuilders.post("/clients")
+		           .contentType(MediaType.APPLICATION_JSON)
+		           .content("{ \"nom\": \"Dupont\", \"prenoms\": \"Jean\" }") 
+		           .accept(MediaType.APPLICATION_JSON))
+				   .andExpect(status().isOk());
+			
+	}
+	
 
 }
